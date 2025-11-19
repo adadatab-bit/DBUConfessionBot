@@ -5,12 +5,15 @@ import logging
 # --- BOT SETTINGS ---
 BOT_TOKEN = "8284563442:AAHdtUvMaVAQr62vijuM6XUS7YDKW-88gEc"
 CHANNEL_ID = -1003258379804
+BOT_USERNAME = "DBU_Vent_Space_Bot"  # Replace with your bot username
 # ---------------------
 
 logging.basicConfig(level=logging.INFO)
 
-# Temporary storage for comments: key = channel message_id, value = list of comments
+# Temporary storage for comments: key = confession_id, value = list of comments
 confession_comments = {}
+# Map user submissions to confession_id for reference
+confession_ids = {}
 
 # --- /start command ---
 async def start(update: Update, context):
@@ -20,8 +23,8 @@ async def start(update: Update, context):
         "🔒 Your privacy is fully protected — your identity will never be revealed.\n\n"
         "📬 How it works:\n"
         "• Send me a message → I post it anonymously in the channel.\n"
-        "• Click 'Comments' under a post to read or add anonymous comments privately.\n\n"
-        "Please be respectful. No hate speech or private info sharing."
+        "• Click 'Comments' under a post in the channel → opens this bot to read/add comments.\n\n"
+        "Have fun."
     )
     await update.message.reply_text(welcome_text, parse_mode="Markdown")
 
@@ -29,8 +32,10 @@ async def start(update: Update, context):
 async def handle_message(update: Update, context):
     user_text = update.message.text
 
-    # Inline button for channel post
-    keyboard = [[InlineKeyboardButton("💬 Comments", callback_data="comments")]]
+    # Post confession to channel with URL button opening the bot
+    keyboard = [
+        [InlineKeyboardButton("💬 Comments", url=f"https://t.me/{BOT_USERNAME}")]
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     send_text = (
@@ -40,7 +45,7 @@ async def handle_message(update: Update, context):
         "────────────────"
     )
 
-    # Send confession to the channel only
+    # Send confession to channel
     msg = await context.bot.send_message(
         chat_id=CHANNEL_ID,
         text=send_text,
@@ -48,37 +53,22 @@ async def handle_message(update: Update, context):
         reply_markup=reply_markup
     )
 
-    # Initialize comments list
-    confession_comments[msg.message_id] = []
+    # Store confession_id for comments
+    confession_id = msg.message_id
+    confession_comments[confession_id] = []
+    confession_ids[update.message.from_user.id] = confession_id
 
-    await update.message.reply_text("Your confession has been posted anonymously ✔️")
+    await update.message.reply_text("✅ Your confession has been posted anonymously!")
 
-# --- Handle inline button clicks ---
+# --- Handle inline button clicks in bot (Read/Add Comments) ---
 async def button_click(update: Update, context):
     query = update.callback_query
     await query.answer()
 
-    user_id = query.from_user.id  # send all interactions privately
+    user_id = query.from_user.id
 
-    if query.data == "comments":
-        # Open bot privately with confession text + buttons
-        confession_text = query.message.text
-        keyboard = [
-            [
-                InlineKeyboardButton("📖 Read Comments", callback_data=f"read_{query.message.message_id}"),
-                InlineKeyboardButton("✏️ Add Comment", callback_data=f"add_{query.message.message_id}")
-            ]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-
-        await context.bot.send_message(
-            chat_id=user_id,
-            text=f"📩 *Confession:*\n\n{confession_text}",
-            parse_mode="Markdown",
-            reply_markup=reply_markup
-        )
-
-    elif query.data.startswith("read_"):
+    # Check if user is adding or reading comments
+    if query.data.startswith("read_"):
         confession_id = int(query.data.split("_")[1])
         comments = confession_comments.get(confession_id, [])
         if comments:
@@ -92,7 +82,7 @@ async def button_click(update: Update, context):
         context.user_data["awaiting_comment"] = confession_id
         await context.bot.send_message(
             chat_id=user_id,
-            text="Please type your comment. It will be added anonymously."
+            text="✏️ Please type your comment. It will be added anonymously."
         )
 
 # --- Handle user comment input ---
@@ -101,9 +91,33 @@ async def handle_comment_input(update: Update, context):
     if confession_id:
         comment_text = update.message.text
         confession_comments[confession_id].append(comment_text)
-
-        await update.message.reply_text("Your anonymous comment has been added ✔️")
+        await update.message.reply_text("✅ Your anonymous comment has been added!")
         context.user_data["awaiting_comment"] = None
+
+# --- Command to show last confession with buttons (for demonstration) ---
+async def show_last_confession(update: Update, context):
+    user_id = update.message.from_user.id
+    # Get the last confession posted by this user
+    confession_id = confession_ids.get(user_id)
+    if not confession_id:
+        await update.message.reply_text("You haven't posted any confessions yet.")
+        return
+
+    # Build buttons
+    keyboard = [
+        [
+            InlineKeyboardButton("📖 Read Comments", callback_data=f"read_{confession_id}"),
+            InlineKeyboardButton("✏️ Add Comment", callback_data=f"add_{confession_id}")
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await context.bot.send_message(
+        chat_id=user_id,
+        text=f"📩 *Confession:*\n\nCheck your confession below.",
+        parse_mode="Markdown",
+        reply_markup=reply_markup
+    )
 
 # --- Main bot setup ---
 def main():
@@ -111,6 +125,7 @@ def main():
 
     # Command
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("myconfession", show_last_confession))
 
     # Handlers
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
