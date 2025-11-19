@@ -5,7 +5,6 @@ import logging
 # --- BOT SETTINGS ---
 BOT_TOKEN = "8284563442:AAHdtUvMaVAQr62vijuM6XUS7YDKW-88gEc"
 CHANNEL_ID = -1003258379804
-BOT_USERNAME = "DBU_Vent_Space_Bot"  # Replace with your bot username
 # ---------------------
 
 logging.basicConfig(level=logging.INFO)
@@ -24,7 +23,7 @@ async def start(update: Update, context):
         "📬 How it works:\n"
         "• Send me a message → I post it anonymously in the channel.\n"
         "• Click 'Comments' under a post in the channel → opens this bot to read/add comments.\n\n"
-        "Have fun."
+        "Make sure you have fun."
     )
     await update.message.reply_text(welcome_text, parse_mode="Markdown")
 
@@ -34,7 +33,7 @@ async def handle_message(update: Update, context):
 
     # Post confession to channel with URL button opening the bot
     keyboard = [
-        [InlineKeyboardButton("💬 Comments", url=f"https://t.me/{BOT_USERNAME}")]
+        [InlineKeyboardButton("💬 Comments", url="https://t.me/dbu_ventspace_bot")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -94,7 +93,7 @@ async def handle_comment_input(update: Update, context):
         await update.message.reply_text("✅ Your anonymous comment has been added!")
         context.user_data["awaiting_comment"] = None
 
-# --- Command to show last confession with buttons (for demonstration) ---
+# --- Command to show last confession with buttons ---
 async def show_last_confession(update: Update, context):
     user_id = update.message.from_user.id
     # Get the last confession posted by this user
