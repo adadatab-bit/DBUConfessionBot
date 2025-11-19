@@ -191,7 +191,7 @@ if __name__ == "__main__":
     # Set webhook on startup
     import requests
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/setWebhook"
-    webhook_url = f"https://dbuconfessionbot-1.onrender.com{WEBHOOK_PATH}"
+    webhook_url = f"https://dbu-ventspace-bot.onrender.com{WEBHOOK_PATH}"
     r = requests.get(url, params={"url": webhook_url})
     print("Set webhook response:", r.text)
     uvicorn.run(app, host="0.0.0.0", port=PORT)
