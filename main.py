@@ -9,7 +9,7 @@ CHANNEL_ID = -1003258379804
 
 logging.basicConfig(level=logging.INFO)
 
-# Temporary storage for comments (key: confession message_id, value: list of comments)
+# Temporary storage for comments: key = channel message_id, value = list of comments
 confession_comments = {}
 
 # --- /start command ---
@@ -29,7 +29,7 @@ async def start(update: Update, context):
 async def handle_message(update: Update, context):
     user_text = update.message.text
 
-    # Add a "Comments" button under the post in the channel
+    # Inline button for channel post
     keyboard = [[InlineKeyboardButton("💬 Comments", callback_data="comments")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -40,7 +40,7 @@ async def handle_message(update: Update, context):
         "────────────────"
     )
 
-    # Send only the original confession to the channel
+    # Send confession to the channel only
     msg = await context.bot.send_message(
         chat_id=CHANNEL_ID,
         text=send_text,
@@ -48,7 +48,7 @@ async def handle_message(update: Update, context):
         reply_markup=reply_markup
     )
 
-    # Initialize empty comments list for this confession
+    # Initialize comments list
     confession_comments[msg.message_id] = []
 
     await update.message.reply_text("Your confession has been posted anonymously ✔️")
@@ -58,12 +58,11 @@ async def button_click(update: Update, context):
     query = update.callback_query
     await query.answer()
 
-    user_id = query.from_user.id  # send all responses privately
+    user_id = query.from_user.id  # send all interactions privately
 
     if query.data == "comments":
-        # Send the confession privately with inline buttons
+        # Open bot privately with confession text + buttons
         confession_text = query.message.text
-
         keyboard = [
             [
                 InlineKeyboardButton("📖 Read Comments", callback_data=f"read_{query.message.message_id}"),
