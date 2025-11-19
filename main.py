@@ -16,7 +16,8 @@ confession_comments = {}
 async def start(update: Update, context):
     welcome_text = (
         "👋 Welcome to *DBU Vent Space*!\n\n"
-        "A safe, anonymous space for students to vent, confess, or share.\n\n"
+        "A safe, anonymous space for students to vent, confess, or share anything on their mind.\n\n"
+        "🔒 Your privacy is fully protected — your identity will never be revealed.\n\n"
         "📬 How it works:\n"
         "• Send me a message → I post it anonymously in the channel.\n"
         "• Click 'Comments' under a post to read or add anonymous comments privately.\n\n"
@@ -28,7 +29,7 @@ async def start(update: Update, context):
 async def handle_message(update: Update, context):
     user_text = update.message.text
 
-    # Add a "Comments" button under the post
+    # Add a "Comments" button under the post in the channel
     keyboard = [[InlineKeyboardButton("💬 Comments", callback_data="comments")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -57,9 +58,12 @@ async def button_click(update: Update, context):
     query = update.callback_query
     await query.answer()
 
+    user_id = query.from_user.id  # send all responses privately
+
     if query.data == "comments":
-        # Send the confession privately to the user
+        # Send the confession privately with inline buttons
         confession_text = query.message.text
+
         keyboard = [
             [
                 InlineKeyboardButton("📖 Read Comments", callback_data=f"read_{query.message.message_id}"),
@@ -69,7 +73,7 @@ async def button_click(update: Update, context):
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         await context.bot.send_message(
-            chat_id=query.from_user.id,  # send privately to user
+            chat_id=user_id,
             text=f"📩 *Confession:*\n\n{confession_text}",
             parse_mode="Markdown",
             reply_markup=reply_markup
@@ -82,13 +86,13 @@ async def button_click(update: Update, context):
             text = "💬 *Comments:*\n\n" + "\n\n".join(comments)
         else:
             text = "No comments yet."
-        await context.bot.send_message(chat_id=query.from_user.id, text=text, parse_mode="Markdown")
+        await context.bot.send_message(chat_id=user_id, text=text, parse_mode="Markdown")
 
     elif query.data.startswith("add_"):
         confession_id = int(query.data.split("_")[1])
         context.user_data["awaiting_comment"] = confession_id
         await context.bot.send_message(
-            chat_id=query.from_user.id,
+            chat_id=user_id,
             text="Please type your comment. It will be added anonymously."
         )
 
